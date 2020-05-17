@@ -39,9 +39,8 @@ def main():
     feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
     Model = models.LinearRegression
 
-    for i, (train_dataset, test_dataset) in enumerate(partitions_generator(d_covid19, 10)):
-        logging.info(
-            f'train size {len(train_dataset)}, test size {len(test_dataset)}')
+    for fold_idx, (train_dataset, test_dataset) in \
+            enumerate(partitions_generator(d_covid19, 10)):
 
         features_train = feature_extractor.extract(train_dataset)
         labels_train = train_dataset.labels
@@ -52,14 +51,19 @@ def main():
         model.fit(features_train, labels_train)
         predictions = model.predict(features_test)
 
-        performance = np.zeros(len(test_dataset.pathologies))
+        performance = [0] * len(test_dataset.pathologies)
 
         for i in range(len(test_dataset.pathologies)):
             if np.unique(labels_test[:, i]).shape[0] > 1:
                 performance[i] = roc_auc_score(labels_test[:, i],
                                                predictions[i][:, 1])
+            else:
+                performance[i] = 'Undefined - only one label in test'
 
-        logging.info(f'At fold {i} per class AUC is:\n{performance}')
+        performance = list(zip(test_dataset.pathologies, performance))
+        logging.info(f'At fold {fold_idx} per class AUC is:')
+        for k, v in performance:
+            logging.info(f'\t{k} : {v}')
 
 
 if __name__ == '__main__':

@@ -42,7 +42,9 @@ class SafeOneClassMixin:
 
     def predict_proba(self, X):
         if self._single_class:
-            return np.full(len(X), self.classes_[0])
+            result = np.zeros((len(X), 2))
+            result[:, self.classes_.astype(np.int)[0]] = 1
+            return result
         return super().predict_proba(X)
 
 
