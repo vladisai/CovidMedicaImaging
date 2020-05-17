@@ -25,7 +25,7 @@ class NeuralNetFeatureExtractor(FeatureExtractor):
 
     def extract(self, dataset):
         """Returns numpy array with 1024 features for each example"""
-        loader = torch.utils.data.DataLoader(dataset, batch_size=16)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=16, shuffle=True)
         results = []
         # I'm not sure why no grad is necessary here.
         # Calling model.eval() doesn't seem to work, model runs out
