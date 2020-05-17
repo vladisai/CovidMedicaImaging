@@ -21,13 +21,18 @@ def get_test_folds_indices(dataset_length, folds):
 
 
 def partitions_generator(dataset, folds):
-    test_folds_indices = get_test_folds_indices(len(dataset), folds)
+    patient_ids = dataset.csv['patientid'].unique()
+    logging.debug(f'found {len(patient_ids)} patients in the dataset')
+    test_folds_indices =\
+        get_test_folds_indices(len(patient_ids), folds)
     for test_indices in test_folds_indices:
-        train_mapping = np.ones(len(dataset))
-        for i in test_indices:
-            train_mapping[i] = 0
-        train_indices = np.argwhere(train_mapping == 1).flatten()
-        test_indices = np.argwhere(train_mapping == 0).flatten()
+        test_patient_ids = [patient_ids[i] for i in test_indices]
+        test_mapping = np.zeros(len(dataset))
+        for i in range(len(dataset)):
+            if dataset.csv['patientid'].iloc[i] in test_patient_ids:
+                test_mapping[i] = 1
+        train_indices = np.argwhere(test_mapping == 0).flatten()
+        test_indices = np.argwhere(test_mapping == 1).flatten()
         train_dataset = xrv_datasets.SubsetDataset(dataset, train_indices)
         test_dataset = xrv_datasets.SubsetDataset(dataset, test_indices)
         yield train_dataset, test_dataset
@@ -43,14 +48,19 @@ def main():
 
     for fold_idx, (train_dataset, test_dataset) in \
             enumerate(partitions_generator(d_covid19, 2)):
-        logging.info(f'fold number {fold_idx}: '\
-                      f'train size is {len(train_dataset)} '\
-                      f'test size is {len(test_dataset)}')
+        logging.info(f'fold number {fold_idx}: '
+                     f'train size is {len(train_dataset)} '
+                     f'test size is {len(test_dataset)}')
 
         features_train = feature_extractor.extract(train_dataset)
         labels_train = train_dataset.labels
+        assert features_train.shape[0] == len(train_dataset)
+        assert labels_train.shape[0] == len(train_dataset)
+
         features_test = feature_extractor.extract(test_dataset)
         labels_test = test_dataset.labels
+        assert features_test.shape[0] == len(test_dataset)
+        assert labels_test.shape[0] == len(test_dataset)
 
         model = Model()
         model.fit(features_train, labels_train)
@@ -71,8 +81,8 @@ def main():
         performance = list(zip(test_dataset.pathologies, performance))
         logging.info(f'At fold {fold_idx} per class AUC is:')
         for i, (k, v) in enumerate(performance):
-            logging.info(f'\t{k} : {v}'\
-                         f'({per_class_counts[i]}/{labels_test.shape[0]}'\
+            logging.info(f'\t{k} : {v}'
+                         f'({per_class_counts[i]}/{labels_test.shape[0]}'
                          'postive in test)')
 
     logging.info(f'Average per class AUC across all folds:')

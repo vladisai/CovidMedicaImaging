@@ -59,7 +59,8 @@ class ShenzhenDataset(Dataset):
         self.label[self.pathologies.index('No Finding')] = 1
         self.label = self.label.astype(np.float32)
         self.labels = np.tile(self.label, [len(self.image_paths), 1])
-        self.csv = self.image_paths
+        self.csv = pd.DataFrame(np.arange(1000, 1000 + len(self.image_paths)),
+                                columns=['patientid'])
 
     def __len__(self):
         return len(self.image_paths)
@@ -74,7 +75,7 @@ class ShenzhenDataset(Dataset):
             img = self.transform(img)
         if self.data_aug is not None:
             img = self.data_aug(img)
-        return {'img': img, 'lab': self.label, 'idx':idx}
+        return {'img': img, 'lab': self.label, 'idx': idx}
 
 
 class COVID19_Dataset(xrv_datasets.COVID19_Dataset):
@@ -103,7 +104,10 @@ class CombinedDataset(xrv_datasets.Merge_Dataset):
     the covid19 dataset.
     Contains 520 samples in total.
     """
+
     def __init__(self, transform=get_default_transform(), data_aug=None):
-        self.covid_dataset = COVID19_Dataset(transform=transform, data_aug=data_aug)
-        self.shenzhen_dataset = ShenzhenDataset(transform=transform, data_aug=data_aug)
+        self.covid_dataset = COVID19_Dataset(
+            transform=transform, data_aug=data_aug)
+        self.shenzhen_dataset = ShenzhenDataset(
+            transform=transform, data_aug=data_aug)
         super().__init__([self.covid_dataset, self.shenzhen_dataset])
