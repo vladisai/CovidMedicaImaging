@@ -7,12 +7,13 @@ import argparse
 import cv2
 import os
 
-def save_data(output_path,data):
+def save_data(output_path,data,write_images):
   features,images=data
   for key in features:
     np.save(output_path+'/features_'+key+'.npy',features[key])
     # saves one sample image for each feature
-    cv2.imwrite(output_path+'/image_'+key+'.png',images[key][0])
+    if write_images:
+      cv2.imwrite(output_path+'/image_'+key+'.png',images[key][0])
 
 def load_data(input_path,target_size=None,crop_by_pixels=None,crop_by_factors=None,**kwargs):
   try:
@@ -75,7 +76,7 @@ def get_fourier(images):
   shifted=[np.fft.fftshift(x) for x in mags]
   return [np.divide(ex,np.max(ex)) for ex in shifted],shifted
 
-def main(input_path,output_path,fft,lbp,hog,lbp_kwargs={},hog_kwargs={},preprocessing_kwargs={}):
+def main(input_path,output_path,fft,lbp,hog,lbp_kwargs={},hog_kwargs={},preprocessing_kwargs={},write_images=False):
   logging.getLogger().setLevel(logging.INFO)
   data=load_data(input_path,**preprocessing_kwargs)
   features={}
@@ -99,13 +100,14 @@ def main(input_path,output_path,fft,lbp,hog,lbp_kwargs={},hog_kwargs={},preproce
     features['hog']=hog_features
     logging.info("Computed hog")
   data=[features,images]
-  save_data(output_path,data)
+  save_data(output_path,data,write_images)
   logging.info(f"Files written to '{output_path}'")
 
 if __name__=='__main__':
   parser=argparse.ArgumentParser()
   parser.add_argument('--input_path',type=str,default=None)
   parser.add_argument('--output_path',type=str,default=None)
+  parser.add_argument('--write_images',type=int,default=False)
   parser.add_argument('--fft',type=int,default=1) # flag to compute fourier transform
   parser.add_argument('--lbp',type=int,default=1) # flag to compute local binary patterns
   parser.add_argument('--hog',type=int,default=1) # flag to compute histogram of gradients
@@ -117,4 +119,4 @@ if __name__=='__main__':
   # 'crop_by_pixels':tuple(int,int) (crop the central piece of given height and width out of all images), 'crop_by_factors':tuple(float,float):
   # crops the central part of each image leaving only the given fractions of the original dimensions. note that cropping (if any) is applied after resizing (if any).
   args=parser.parse_args()
-  main(args.input_path,args.output_path,args.fft,args.lbp,args.hog,eval(args.lbp_kwargs),eval(args.hog_kwargs),eval(args.preprocessing_kwargs))
+  main(args.input_path,args.output_path,args.fft,args.lbp,args.hog,eval(args.lbp_kwargs),eval(args.hog_kwargs),eval(args.preprocessing_kwargs),args.write_images)
