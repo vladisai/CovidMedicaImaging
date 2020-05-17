@@ -9,6 +9,11 @@ import feature_extractors
 import models
 import data
 
+def PCA(X):
+    cov = np.dot(X.T, X) / X.shape[0] 
+    U,S,V = np.linalg.svd(cov)
+    Xrot_reduced = np.dot(X, U[:,:500])
+    return Xrot_reduced
 
 def get_test_folds_indices(dataset_length, folds):
     permutation = np.random.permutation(dataset_length)
@@ -63,6 +68,11 @@ def main():
         labels_test = test_dataset.labels
         assert features_test.shape[0] == len(test_dataset)
         assert labels_test.shape[0] == len(test_dataset)
+        
+        feat_mean_train = np.mean(features_train, axis = 0)
+        features_train = PCA(features_train-feat_mean_train)
+        features_test = PCA(features_test-feat_mean_train)
+
 
         model = Model()
         model.fit(features_train, labels_train)
