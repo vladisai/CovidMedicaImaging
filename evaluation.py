@@ -1,5 +1,5 @@
 import logging
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, accuracy_score
 import numpy as np
 from torchxrayvision import datasets as xrv_datasets
 
@@ -22,7 +22,7 @@ def get_test_folds_indices(dataset_length, folds):
 
 def partitions_generator(dataset, folds):
     patient_ids = dataset.csv['patientid'].unique()
-    logging.debug(f'found {len(patient_ids)} patients in the dataset')
+    logging.info(f'found {len(patient_ids)} patients in the dataset')
     test_folds_indices =\
         get_test_folds_indices(len(patient_ids), folds)
     for test_indices in test_folds_indices:
@@ -35,7 +35,12 @@ def partitions_generator(dataset, folds):
         test_indices = np.argwhere(test_mapping == 1).flatten()
         train_dataset = xrv_datasets.SubsetDataset(dataset, train_indices)
         test_dataset = xrv_datasets.SubsetDataset(dataset, test_indices)
-        yield train_dataset, test_dataset
+
+        assert len(set(train_dataset.csv['patientid'].unique()) &
+                   set(test_dataset.csv['patientid'].unique())) == 0
+
+        # yield train_dataset, test_dataset
+        yield test_dataset, train_dataset
 
 
 def main():
@@ -47,7 +52,7 @@ def main():
     performance_history = [[] for _ in range(len(d_covid19.pathologies))]
 
     for fold_idx, (train_dataset, test_dataset) in \
-            enumerate(partitions_generator(d_covid19, 2)):
+            enumerate(partitions_generator(d_covid19, 10)):
         logging.info(f'fold number {fold_idx}: '
                      f'train size is {len(train_dataset)} '
                      f'test size is {len(test_dataset)}')
@@ -64,6 +69,7 @@ def main():
 
         model = Model()
         model.fit(features_train, labels_train)
+        predictions_proba = model.predict_proba(features_test)
         predictions = model.predict(features_test)
 
         performance = [0] * len(test_dataset.pathologies)
@@ -71,8 +77,10 @@ def main():
 
         for i in range(len(test_dataset.pathologies)):
             if np.unique(labels_test[:, i]).shape[0] > 1:
-                performance[i] = roc_auc_score(labels_test[:, i],
-                                               predictions[i][:, 1])
+                # performance[i] = roc_auc_score(labels_test[:, i],
+                #                                predictions_proba[i][:, 1])
+                performance[i] = accuracy_score(labels_test[:, i],
+                                                predictions[:, i])
                 performance[i] = round(performance[i], 3)
                 performance_history[i].append(performance[i])
             else:

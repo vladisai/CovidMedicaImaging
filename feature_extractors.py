@@ -23,12 +23,14 @@ class NeuralNetFeatureExtractor(FeatureExtractor):
         out = F.relu(features, inplace=True)
         out = F.adaptive_avg_pool2d(out, (1, 1)).view(features.size(0), -1)
         out = out.cpu()
+        # out = out[:, 500:501]
+        # out = torch.rand(batch['img'].shape[0], 3)
         # out = torch.cat([out, batch['lab']], axis=1)
         return out
 
     def extract(self, dataset):
         """Returns numpy array with 1024 features for each example"""
-        loader = torch.utils.data.DataLoader(dataset, batch_size=16)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=16, num_workers=16)
         results = []
         # I'm not sure why no grad is necessary here.
         # Calling model.eval() doesn't seem to work, model runs out

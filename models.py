@@ -55,8 +55,11 @@ class LogisticRegression(Model):
     def fit(self, X, y):
         self.model = MultiOutputClassifier(self.SafeOneClassLogisticRegression()).fit(X, y)
 
-    def predict(self, X):
+    def predict_proba(self, X):
         return self.model.predict_proba(X)
+
+    def predict(self, X):
+        return self.model.predict(X)
 
 
 

@@ -1,9 +1,10 @@
 import os
 
+import torch
 import pandas as pd
 import numpy as np
 from skimage.io import imread
-from torch.utils.data import Dataset, ConcatDataset
+from torch.utils.data import Dataset, DataLoader
 import torchvision
 
 from torchxrayvision import datasets as xrv_datasets
@@ -11,9 +12,10 @@ from torchxrayvision import datasets as xrv_datasets
 
 def get_labels(dataset):
     y = []
-    for sample in dataset:
-        y.append(sample['lab'])
-    y = np.stack(y)
+    loader = DataLoader(dataset, batch_size=16, num_workers=16)
+    for batch in loader:
+        y.append(batch['lab'].numpy())
+    y = np.cat(y, axis=0)
     return y
 
 
@@ -62,6 +64,10 @@ class ShenzhenDataset(Dataset):
         self.csv = pd.DataFrame(np.arange(1000, 1000 + len(self.image_paths)),
                                 columns=['patientid'])
 
+        # self.images = \
+        #     np.random.rand(len(self.image_paths), 1, 244, 244)\
+        #     .astype(np.float32) * 2048 - 1024
+
     def __len__(self):
         return len(self.image_paths)
 
@@ -75,7 +81,9 @@ class ShenzhenDataset(Dataset):
             img = self.transform(img)
         if self.data_aug is not None:
             img = self.data_aug(img)
-        return {'img': img, 'lab': self.label, 'idx': idx}
+        # img = self.images[idx]
+
+        return {'img': img, 'lab': self.labels[idx], 'idx': idx}
 
 
 class COVID19_Dataset(xrv_datasets.COVID19_Dataset):
@@ -95,6 +103,12 @@ class COVID19_Dataset(xrv_datasets.COVID19_Dataset):
                          csvpath=self.COVID_19_DATASET_METADATA_PATH,
                          *args,
                          **kwargs)
+        # self.images = \
+        #     np.random.rand(len(self.csv), 1, 244, 244).astype(np.float32) * 2048 - 1024
+
+    # def __getitem__(self, idx):
+    #     img = self.images[idx]
+    #     return {"img": img, "lab": self.labels[idx], "idx": idx}
 
 
 class CombinedDataset(xrv_datasets.Merge_Dataset):
