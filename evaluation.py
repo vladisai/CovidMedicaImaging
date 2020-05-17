@@ -1,8 +1,10 @@
 import logging
+from sklearn.metrics import classification_report
 from sklearn.metrics import roc_auc_score
+from sklearn.metrics import multilabel_confusion_matrix
 import numpy as np
 from torchxrayvision import datasets as xrv_datasets
-
+from sklearn.metrics import accuracy_score
 import feature_extractors
 import models
 import data
@@ -54,7 +56,7 @@ def main():
 
         model = Model()
         model.fit(features_train, labels_train)
-        predictions = model.predict(features_test)
+        predictions = model.predict_proba(features_test)
 
         performance = [0] * len(test_dataset.pathologies)
         per_class_counts = labels_test.sum(axis=0).astype(np.int)
@@ -73,7 +75,10 @@ def main():
             logging.info(f'\t{k} : {v}'\
                          f'({per_class_counts[i]}/{labels_test.shape[0]}'\
                          'postive in test)')
-
+        preds = model.predict(features_test)
+        #print(f'Confusion matrix: {multilabel_confusion_matrix(labels_test, preds, labels=test_dataset.pathologies)}')
+        print(f'Classification report:{classification_report(labels_test, preds, target_names=test_dataset.pathologies)}')
+        print(f'Accuracy: {accuracy_score(labels_test, preds)}')
     logging.info(f'Average per class AUC across all folds:')
     for k, v in zip(d_covid19.pathologies, performance_history):
         if len(v) > 0:

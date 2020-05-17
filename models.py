@@ -2,7 +2,7 @@ import numpy as np
 
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.linear_model import LogisticRegression
-
+from sklearn.neighbors import KNeighborsClassifier
 import data
 
 
@@ -55,9 +55,21 @@ class LogisticRegression(Model):
     def fit(self, X, y):
         self.model = MultiOutputClassifier(self.SafeOneClassLogisticRegression()).fit(X, y)
 
-    def predict(self, X):
+    def predict_proba(self, X):
         return self.model.predict_proba(X)
+    def predict(self,X):
+        return self.model.predict(X)
 
+class KNeighborsClassifier(Model):
+    class SafeOneClassKNN(SafeOneClassMixin, KNeighborsClassifier):
+        pass
 
+    def fit(self,X,y):
+        self.model = MultiOutputClassifier(self.SafeOneClassKNN()).fit(X,y)
+
+    def predict_proba(self,X):
+        return self.model.predict_proba(X)
+    def predict(self,X):
+        return self.model.predict(X)
 
 
