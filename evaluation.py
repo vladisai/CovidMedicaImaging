@@ -39,8 +39,13 @@ def main():
     feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
     Model = models.LinearRegression
 
+    performance_history = [[] for _ in range(len(d_covid19.pathologies))]
+
     for fold_idx, (train_dataset, test_dataset) in \
             enumerate(partitions_generator(d_covid19, 10)):
+        logging.debug(f'fold number {fold_idx}: '\
+                      f'train size is {len(train_dataset)}'\
+                      f'test size is {len(test_dataset)}')
 
         features_train = feature_extractor.extract(train_dataset)
         labels_train = train_dataset.labels
@@ -52,20 +57,32 @@ def main():
         predictions = model.predict(features_test)
 
         performance = [0] * len(test_dataset.pathologies)
+        per_class_counts = labels_test.sum(axis=0).astype(np.int)
 
         for i in range(len(test_dataset.pathologies)):
             if np.unique(labels_test[:, i]).shape[0] > 1:
                 performance[i] = roc_auc_score(labels_test[:, i],
                                                predictions[i][:, 1])
+                performance_history[i].append(round(performance[i], 3))
             else:
                 performance[i] = 'Undefined - only one label in test'
 
         performance = list(zip(test_dataset.pathologies, performance))
         logging.info(f'At fold {fold_idx} per class AUC is:')
-        for k, v in performance:
-            logging.info(f'\t{k} : {v}')
+        for i, (k, v) in enumerate(performance):
+            logging.info(f'\t{k} : {v}'\
+                         f'({per_class_counts[i]}/{labels_test.shape[0]}'\
+                         'postive in test)')
+
+    logging.info(f'Average per class AUC across all folds:')
+    for k, v in zip(d_covid19.pathologies, performance_history):
+        if len(v) > 0:
+            avg_auc = f'{np.mean(v)} (out of {len(v)} folds)'
+        else:
+            avg_auc = 'Undefined - only one unique label value'
+        logging.info(f'\t{k} : {avg_auc:.3f}')
 
 
 if __name__ == '__main__':
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.DEBUG)
     main()

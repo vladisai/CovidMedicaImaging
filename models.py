@@ -57,3 +57,4 @@ class LinearRegression(Model):
 
     def predict(self, X):
         return self.model.predict_proba(X)
+

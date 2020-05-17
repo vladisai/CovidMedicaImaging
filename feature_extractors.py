@@ -17,15 +17,18 @@ class NeuralNetFeatureExtractor(FeatureExtractor):
         self.model.cuda()
 
     def get_features(self, batch):
+        # return batch['lab']
         d = batch['img'].cuda()
         features = self.model.features(d)
         out = F.relu(features, inplace=True)
         out = F.adaptive_avg_pool2d(out, (1, 1)).view(features.size(0), -1)
-        return out.cpu()
+        out = out.cpu()
+        # out = torch.cat([out, batch['lab']], axis=1)
+        return out
 
     def extract(self, dataset):
         """Returns numpy array with 1024 features for each example"""
-        loader = torch.utils.data.DataLoader(dataset, batch_size=16, shuffle=True)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=16)
         results = []
         # I'm not sure why no grad is necessary here.
         # Calling model.eval() doesn't seem to work, model runs out
