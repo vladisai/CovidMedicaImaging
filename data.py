@@ -9,6 +9,14 @@ import torchvision
 from torchxrayvision import datasets as xrv_datasets
 
 
+def get_labels(dataset):
+    y = []
+    for sample in dataset:
+        y.append(sample['lab'])
+    y = np.stack(y)
+    return y
+
+
 def get_default_transform():
     return torchvision.transforms.Compose([xrv_datasets.XRayCenterCrop(),
                                            xrv_datasets.XRayResizer(224)])
@@ -50,6 +58,8 @@ class ShenzhenDataset(Dataset):
         self.label = np.zeros(len(self.pathologies))
         self.label[self.pathologies.index('No Finding')] = 1
         self.label = self.label.astype(np.float32)
+        self.labels = np.tile(self.label, [len(self.image_paths), 1])
+        self.csv = self.image_paths
 
     def __len__(self):
         return len(self.image_paths)
@@ -86,7 +96,7 @@ class COVID19_Dataset(xrv_datasets.COVID19_Dataset):
                          **kwargs)
 
 
-class CombinedDataset(ConcatDataset):
+class CombinedDataset(xrv_datasets.Merge_Dataset):
     """Combination of Shenzhen and Covid19 examples.
     This is the dataset for evaluation, which has better
     class balance for 'no finding' images that just

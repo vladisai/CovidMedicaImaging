@@ -1,9 +1,11 @@
-from models import Baseline
-from sklearn.metrics import roc_auc_score
 import logging
+from sklearn.metrics import roc_auc_score
 import numpy as np
 from torchxrayvision import datasets as xrv_datasets
-from data import COVID19_Dataset
+
+import feature_extractors
+import models
+import data
 
 
 def get_test_folds_indices(dataset_length, folds):
@@ -32,30 +34,31 @@ def partitions_generator(dataset, folds):
 
 
 def main():
-    d_covid19 = COVID19_Dataset()
+    d_covid19 = data.CombinedDataset()
     logging.info(f'entire dataset length is {len(d_covid19)}')
+    feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
+    Model = models.LinearRegression
 
     for i, (train_dataset, test_dataset) in enumerate(partitions_generator(d_covid19, 10)):
         logging.info(
             f'train size {len(train_dataset)}, test size {len(test_dataset)}')
-        model = Baseline()
-        model.fit(train_dataset)
-        performance = np.zeros(len(test_dataset.pathologies))
-        predictions = []
-        ground_truth = []
-        for sample in test_dataset:
-            prediction = model.predict(sample)
-            predictions.append(prediction)
-            ground_truth.append(sample['lab'])
 
-        predictions = np.stack(predictions)
-        ground_truth = np.stack(ground_truth)
+        features_train = feature_extractor.extract(train_dataset)
+        labels_train = train_dataset.labels
+        features_test = feature_extractor.extract(test_dataset)
+        labels_test = test_dataset.labels
+
+        model = Model()
+        model.fit(features_train, labels_train)
+        predictions = model.predict(features_test)
+
+        performance = np.zeros(len(test_dataset.pathologies))
 
         for i in range(len(test_dataset.pathologies)):
-            if np.unique(ground_truth[:, i]).shape[0] > 1:
-                performance[i] = roc_auc_score(
-                    ground_truth[:, i], predictions[:, i])
-        performance /= len(test_dataset)
+            if np.unique(labels_test[:, i]).shape[0] > 1:
+                performance[i] = roc_auc_score(labels_test[:, i],
+                                               predictions[i][:, 1])
+
         logging.info(f'At fold {i} per class AUC is:\n{performance}')
 
 
