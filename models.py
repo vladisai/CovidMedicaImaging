@@ -48,7 +48,7 @@ class SafeOneClassMixin:
         return super().predict_proba(X)
 
 
-class LinearRegression(Model):
+class LogisticRegression(Model):
     class SafeOneClassLogisticRegression(SafeOneClassMixin, LogisticRegression):
         pass
 
@@ -57,4 +57,7 @@ class LinearRegression(Model):
 
     def predict(self, X):
         return self.model.predict_proba(X)
+
+
+
 

@@ -37,7 +37,7 @@ def main():
     d_covid19 = data.CombinedDataset()
     logging.info(f'entire dataset length is {len(d_covid19)}')
     feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
-    Model = models.LinearRegression
+    Model = models.LogisticRegression
 
     performance_history = [[] for _ in range(len(d_covid19.pathologies))]
 
