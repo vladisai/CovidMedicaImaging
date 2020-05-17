@@ -42,9 +42,9 @@ def main():
     performance_history = [[] for _ in range(len(d_covid19.pathologies))]
 
     for fold_idx, (train_dataset, test_dataset) in \
-            enumerate(partitions_generator(d_covid19, 10)):
-        logging.debug(f'fold number {fold_idx}: '\
-                      f'train size is {len(train_dataset)}'\
+            enumerate(partitions_generator(d_covid19, 2)):
+        logging.info(f'fold number {fold_idx}: '\
+                      f'train size is {len(train_dataset)} '\
                       f'test size is {len(test_dataset)}')
 
         features_train = feature_extractor.extract(train_dataset)
@@ -63,7 +63,8 @@ def main():
             if np.unique(labels_test[:, i]).shape[0] > 1:
                 performance[i] = roc_auc_score(labels_test[:, i],
                                                predictions[i][:, 1])
-                performance_history[i].append(round(performance[i], 3))
+                performance[i] = round(performance[i], 3)
+                performance_history[i].append(performance[i])
             else:
                 performance[i] = 'Undefined - only one label in test'
 
@@ -77,12 +78,12 @@ def main():
     logging.info(f'Average per class AUC across all folds:')
     for k, v in zip(d_covid19.pathologies, performance_history):
         if len(v) > 0:
-            avg_auc = f'{np.mean(v)} (out of {len(v)} folds)'
+            avg_auc = f'{np.mean(v):.3f} (out of {len(v)} folds)'
         else:
             avg_auc = 'Undefined - only one unique label value'
-        logging.info(f'\t{k} : {avg_auc:.3f}')
+        logging.info(f'\t{k} : {avg_auc}')
 
 
 if __name__ == '__main__':
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.INFO)
     main()
