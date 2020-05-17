@@ -41,7 +41,7 @@ def main():
 
     for fold_idx, (train_dataset, test_dataset) in \
             enumerate(partitions_generator(d_covid19, 10)):
-
+        train_dataset.data_aug = data.get_data_aug()
         features_train = feature_extractor.extract(train_dataset)
         labels_train = train_dataset.labels
         features_test = feature_extractor.extract(test_dataset)
