@@ -1,5 +1,6 @@
 import os
 
+import cv2
 import pandas as pd
 import numpy as np
 from skimage.io import imread
@@ -81,6 +82,8 @@ class ShenzhenDataset(Dataset):
                                   self.image_paths['filename'].iloc[idx]))
         img = xrv_datasets.normalize(img, self.MAX_VAL)
         # Add color channel
+        if len(img.shape)==3:
+            img=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
         img = img[None, :, :]
         if self.transform is not None:
             img = self.transform(img)
