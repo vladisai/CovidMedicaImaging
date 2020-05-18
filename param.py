@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 class Config:
+    """This is a hack class I need to run this stuff in jupyter"""
     seed = 20
     classifier = 'LogisticRegression'
     PCA = False
@@ -13,6 +14,7 @@ class Config:
     hog = False
     fft = False
     test = False
+    feature_num = 10000
 
 args = Config()
 
