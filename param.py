@@ -4,6 +4,18 @@ import random
 import numpy as np
 import torch
 
+class Config:
+    seed = 20
+    classifier = 'LogisticRegression'
+    PCA = False
+    pca_out_dim = 1000
+    lbp = True
+    hog = False
+    fft = False
+    test = False
+
+args = Config()
+
 def parse_args():
         parser = argparse.ArgumentParser()
         parser.add_argument('--seed', type=int, default=20, help='random seed')
@@ -22,4 +34,5 @@ def parse_args():
 
         return args
 
-args = parse_args()
+if __name__ == '__main__':
+    args = parse_args()

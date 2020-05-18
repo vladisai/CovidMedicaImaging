@@ -144,31 +144,36 @@ def main():
                      f'train size is {len(train_dataset)} '
                      f'test size is {len(test_dataset)}')
 
-        features_train = feature_extractor.extract(train_dataset)
-        labels_train = train_dataset.labels
-        assert features_train.shape[0] == len(train_dataset)
-        assert labels_train.shape[0] == len(train_dataset)
+        if not args.test:
+            features_train = feature_extractor.extract(train_dataset)
+            labels_train = train_dataset.labels
 
-        features_test = feature_extractor.extract(test_dataset)
-        labels_test = test_dataset.labels
-        assert features_test.shape[0] == len(test_dataset)
-        assert labels_test.shape[0] == len(test_dataset)
+            features_eval = feature_extractor.extract(val_dataset)
+            labels_eval = val_dataset.labels
+        else:
+            train_val = xrv_datasets.Merge_Dataset([train_dataset, val_dataset])
+
+            features_train = feature_extractor.extract(train_val)
+            labels_train = train_val.labels
+
+            features_eval = feature_extractor.extract(test_dataset)
+            labels_eval = test_dataset.labels
 
         if args.PCA:
             print("Running PCA")
             feat_mean_train = np.mean(features_train, axis=0)
             features_train = PCA(features_train-feat_mean_train)
-            features_test = PCA(features_test-feat_mean_train)
+            features_eval = PCA(features_eval-feat_mean_train)
 
         model = Model()
         model.fit(features_train, labels_train)
 
-        predictions_hard = model.predict(features_test)
-        predictions = model.predict_proba(features_test)
+        predictions_hard = model.predict(features_eval)
+        predictions = model.predict_proba(features_eval)
 
         metrics = calculate_performance_metrics(predictions,
                                                 predictions_hard,
-                                                labels_test,
+                                                labels_eval,
                                                 test_dataset.pathologies)
         metrics_history.append(metrics)
         logging.info(json.dumps(metrics, indent=4))
