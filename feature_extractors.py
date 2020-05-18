@@ -9,7 +9,7 @@ import feature_engineering
 
 
 class FeatureExtractor:
-    def __init__(self, lbp=True, hog=True, fft=True):
+    def __init__(self, lbp=True, hog=True, fft=True, args_numm=10000):
         assert lbp or hog or fft, "no transformations specified"
         self.hog = hog
         self.lbp = lbp

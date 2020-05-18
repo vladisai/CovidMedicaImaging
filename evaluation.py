@@ -74,8 +74,6 @@ def get_folds(dataset, folds):
 def partitions_generator(dataset, folds):
     patient_ids = dataset.csv['patientid'].unique()
     logging.info(f'found {len(patient_ids)} patients in the dataset')
-    folds_indices =\
-        get_folds_indices(len(patient_ids), folds)
     folds = get_folds(dataset, folds)
     for fold in folds:
         train_dataset = xrv_datasets.SubsetDataset(dataset, fold['train'])
@@ -131,8 +129,14 @@ def calculate_average_performance(performance_reports):
 def main():
     d_covid19 = data.COVID19_Dataset()
     logging.info(f'entire dataset length is {len(d_covid19)}')
-    #feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
-    feature_extractor = feature_extractors.FeatureExtractor(lbp=args.lbp, hog=args.hog,fft=args.fft,args.feature_num)
+    # feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
+    feature_extractor = \
+        feature_extractors.FeatureExtractor(
+            lbp=args.lbp,
+            hog=args.hog,
+            fft=args.fft,
+            args_num=args.feature_num
+        )
     Model = models.LogisticRegression
 
     metrics_history = []
@@ -150,7 +154,8 @@ def main():
             features_eval = feature_extractor.extract(val_dataset)
             labels_eval = val_dataset.labels
         else:
-            train_val = xrv_datasets.Merge_Dataset([train_dataset, val_dataset])
+            train_val = \
+                xrv_datasets.Merge_Dataset([train_dataset, val_dataset])
 
             features_train = feature_extractor.extract(train_val)
             labels_train = train_val.labels
