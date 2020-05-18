@@ -19,15 +19,18 @@ def get_lbp(image,P=8,R=1):
   lbp_hist=np.histogram(lbp_image.reshape(-1),bins=256,range=(0,256))[0]
   return lbp_hist
 
-def get_hog(image):
+def get_hog(image,comp_count=5000):
   image=prepare_image(image)
-  hog_feature=F.hog(image,orientations=9,pixels_per_cell=(8,8),visualize=False,feature_vector=True)
+  pixs=int(np.sqrt(32.*np.prod(image.shape)/comp_count))
+  hog_feature=F.hog(image,orientations=8,pixels_per_cell=(pixs,pixs),cells_per_block=(2,2),visualize=False,feature_vector=True)
   return np.array(hog_feature.reshape(-1))
 
-def get_fft(image):
+def get_fft(image,comp_count=5000):
   image=prepare_image(image)
   # np.fft.restore_all()
   dft=np.fft.fft2(image)
   mag=np.asarray(20*np.log(np.abs(dft)))
   shifted=np.fft.fftshift(mag)
-  return shifted.reshape(-1)
+  dim=int(np.sqrt(comp_count))
+  res=cv2.resize(shifted,(dim,dim))
+  return res.reshape(-1)
