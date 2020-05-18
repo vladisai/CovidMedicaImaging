@@ -1,11 +1,19 @@
 import logging
-from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import classification_report
 import numpy as np
 from torchxrayvision import datasets as xrv_datasets
-
 import feature_extractors
 import models
 import data
+import json
+
+
+def PCA(X):
+    cov = np.dot(X.T, X) / X.shape[0]
+    U, S, V = np.linalg.svd(cov)
+    Xrot_reduced = np.dot(X, U[:, :500])
+    return Xrot_reduced
 
 
 def get_test_folds_indices(dataset_length, folds):
@@ -39,8 +47,49 @@ def partitions_generator(dataset, folds):
         assert len(set(train_dataset.csv['patientid'].unique()) &
                    set(test_dataset.csv['patientid'].unique())) == 0
 
-        # yield train_dataset, test_dataset
-        yield test_dataset, train_dataset
+        yield train_dataset, test_dataset
+
+
+def calculate_performance_metrics(predictions,
+                                  predictions_hard,
+                                  true_labels,
+                                  classes):
+    auc = [0] * len(classes)
+    for i in range(len(classes)):
+        if np.unique(true_labels[:, i]).shape[0] > 1:
+            auc[i] = roc_auc_score(true_labels[:, i],
+                                   predictions[i][:, 1])
+            auc[i] = round(auc[i], 3)
+        else:
+            auc[i] = 'Undefined - only one label in test'
+    report_result = classification_report(true_labels,
+                                          predictions_hard,
+                                          target_names=classes,
+                                          output_dict=True)
+    for i, cl in enumerate(classes):
+        report_result[cl]['AUC'] = auc[i]
+    return report_result
+
+
+def calculate_average_performance(performance_reports):
+    classes = list(performance_reports[0].keys())
+    final_result = {}
+    for cl in classes:
+        count = 0
+        agg_result = performance_reports[0][cl].copy()
+        for key in agg_result:
+            agg_result[key] = 0.0
+        for report in performance_reports:
+            if report[cl]['support'] > 0:
+                count += 1
+                for key in report[cl]:
+                    agg_result[key] += report[cl][key]
+        if count > 0:
+            for key in agg_result:
+                agg_result[key] /= count
+        agg_result['non-zero support folds'] = count
+        final_result[cl] = agg_result
+    return final_result
 
 
 def main():
@@ -49,10 +98,10 @@ def main():
     feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
     Model = models.LogisticRegression
 
-    performance_history = [[] for _ in range(len(d_covid19.pathologies))]
+    metrics_history = []
 
     for fold_idx, (train_dataset, test_dataset) in \
-            enumerate(partitions_generator(d_covid19, 10)):
+            enumerate(partitions_generator(d_covid19, 2)):
         logging.info(f'fold number {fold_idx}: '
                      f'train size is {len(train_dataset)} '
                      f'test size is {len(test_dataset)}')
@@ -67,39 +116,26 @@ def main():
         assert features_test.shape[0] == len(test_dataset)
         assert labels_test.shape[0] == len(test_dataset)
 
+        # feat_mean_train = np.mean(features_train, axis=0)
+        # features_train = PCA(features_train-feat_mean_train)
+        # features_test = PCA(features_test-feat_mean_train)
+
         model = Model()
         model.fit(features_train, labels_train)
-        predictions_proba = model.predict_proba(features_test)
-        predictions = model.predict(features_test)
 
-        performance = [0] * len(test_dataset.pathologies)
-        per_class_counts = labels_test.sum(axis=0).astype(np.int)
+        predictions_hard = model.predict(features_test)
+        predictions = model.predict_proba(features_test)
 
-        for i in range(len(test_dataset.pathologies)):
-            if np.unique(labels_test[:, i]).shape[0] > 1:
-                # performance[i] = roc_auc_score(labels_test[:, i],
-                #                                predictions_proba[i][:, 1])
-                performance[i] = accuracy_score(labels_test[:, i],
-                                                predictions[:, i])
-                performance[i] = round(performance[i], 3)
-                performance_history[i].append(performance[i])
-            else:
-                performance[i] = 'Undefined - only one label in test'
+        metrics = calculate_performance_metrics(predictions,
+                                                predictions_hard,
+                                                labels_test,
+                                                test_dataset.pathologies)
+        metrics_history.append(metrics)
+        logging.info(json.dumps(metrics, indent=4))
 
-        performance = list(zip(test_dataset.pathologies, performance))
-        logging.info(f'At fold {fold_idx} per class AUC is:')
-        for i, (k, v) in enumerate(performance):
-            logging.info(f'\t{k} : {v}'
-                         f'({per_class_counts[i]}/{labels_test.shape[0]}'
-                         'postive in test)')
-
-    logging.info(f'Average per class AUC across all folds:')
-    for k, v in zip(d_covid19.pathologies, performance_history):
-        if len(v) > 0:
-            avg_auc = f'{np.mean(v):.3f} (out of {len(v)} folds)'
-        else:
-            avg_auc = 'Undefined - only one unique label value'
-        logging.info(f'\t{k} : {avg_auc}')
+    average_metrics = calculate_average_performance(metrics_history)
+    logging.info('Average across all folds:')
+    logging.info(json.dumps(average_metrics, indent=4))
 
 
 if __name__ == '__main__':

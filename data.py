@@ -12,7 +12,7 @@ from torchxrayvision import datasets as xrv_datasets
 
 def get_labels(dataset):
     y = []
-    loader = DataLoader(dataset, batch_size=16, num_workers=16)
+    loader = DataLoader(dataset, batch_size=16, num_workers=8)
     for batch in loader:
         y.append(batch['lab'].numpy())
     y = np.cat(y, axis=0)
@@ -20,8 +20,9 @@ def get_labels(dataset):
 
 
 def get_default_transform():
-    return torchvision.transforms.Compose([xrv_datasets.XRayCenterCrop(),
-                                           xrv_datasets.XRayResizer(224)])
+    return None
+    # return torchvision.transforms.Compose([xrv_datasets.XRayCenterCrop(),
+    #                                        xrv_datasets.XRayResizer(224)])
 
 
 class ShenzhenDataset(Dataset):
@@ -31,7 +32,7 @@ class ShenzhenDataset(Dataset):
     Contains 326 samples.
     """
     DATA_PATH = '/misc/vlgscratch4/LecunGroup/vlad/machine_learning_chest_datasets/shenzhen'
-    IMAGES_PATH = os.path.join(DATA_PATH, 'CXR_png_resized')
+    IMAGES_PATH = os.path.join(DATA_PATH, 'CXR_png_resized_2')
     LABELS_PATH = os.path.join(DATA_PATH, 'labels.csv')
     MAX_VAL = 255
 
@@ -63,6 +64,7 @@ class ShenzhenDataset(Dataset):
         self.labels = np.tile(self.label, [len(self.image_paths), 1])
         self.csv = pd.DataFrame(np.arange(1000, 1000 + len(self.image_paths)),
                                 columns=['patientid'])
+        self.csv = pd.concat([self.csv, self.image_paths], axis=1)
 
         # self.images = \
         #     np.random.rand(len(self.image_paths), 1, 244, 244)\
@@ -73,7 +75,7 @@ class ShenzhenDataset(Dataset):
 
     def __getitem__(self, idx):
         img = imread(os.path.join(self.IMAGES_PATH,
-                                  self.image_paths['path'].iloc[idx]))
+                                  self.image_paths['filename'].iloc[idx]))
         img = xrv_datasets.normalize(img, self.MAX_VAL)
         # Add color channel
         img = img[None, :, :]
@@ -94,7 +96,7 @@ class COVID19_Dataset(xrv_datasets.COVID19_Dataset):
     """
 
     COVID_19_DATASET_PATH = '/misc/vlgscratch4/LecunGroup/vlad/machine_learning_chest_datasets/covid-chestxray-dataset'
-    COVID_19_DATASET_IMAGES_PATH = os.path.join(COVID_19_DATASET_PATH, 'images')
+    COVID_19_DATASET_IMAGES_PATH = os.path.join(COVID_19_DATASET_PATH, 'images_resized')
     COVID_19_DATASET_METADATA_PATH = os.path.join(
         COVID_19_DATASET_PATH, 'metadata.csv')
 
