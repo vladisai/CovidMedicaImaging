@@ -1,8 +1,11 @@
+import os
 import logging
+
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import classification_report
 import numpy as np
 from torchxrayvision import datasets as xrv_datasets
+
 import feature_extractors
 import models
 import data
@@ -16,7 +19,7 @@ def PCA(X):
     return Xrot_reduced
 
 
-def get_test_folds_indices(dataset_length, folds):
+def get_folds_indices(dataset_length, folds):
     permutation = np.random.permutation(dataset_length)
     size = dataset_length // folds
     remainder = dataset_length % folds
@@ -28,26 +31,58 @@ def get_test_folds_indices(dataset_length, folds):
     return split
 
 
+def get_folds(dataset, folds):
+    path = f'./folds_{len(dataset)}_{folds}'
+    if os.path.exists(path + '.npy'):
+        logging.info(f'Loading folds from {path}')
+        return np.load(path + '.npy', allow_pickle=True)
+    logging.info(f'Building folds')
+
+    saved_folds = []
+    patient_ids = dataset.csv['patientid'].unique()
+    folds_indices =\
+        get_folds_indices(len(patient_ids), folds)
+
+    for i in range(len(folds_indices)):
+        test_indices = folds_indices[i]
+        nxt = (i + 1) % len(folds_indices)
+        val_indices = folds_indices[nxt]
+
+        test_patient_ids = [patient_ids[i] for i in test_indices]
+        val_patient_ids = [patient_ids[i] for i in val_indices]
+
+        fold_mapping = np.full(len(dataset), 'train')
+        for i in range(len(dataset)):
+            if dataset.csv['patientid'].iloc[i] in test_patient_ids:
+                fold_mapping[i] = 'test'
+            if dataset.csv['patientid'].iloc[i] in val_patient_ids:
+                fold_mapping[i] = 'val'
+
+        train_indices = np.argwhere(fold_mapping == 'train').flatten()
+        val_indices = np.argwhere(fold_mapping == 'val').flatten()
+        test_indices = np.argwhere(fold_mapping == 'test').flatten()
+
+        saved_folds.append(
+            {'train': train_indices, 'val': val_indices, 'test': test_indices})
+
+    np.save(path, saved_folds)
+    logging.info(f'Saved folds to {path}.npy')
+    return saved_folds
+
+
 def partitions_generator(dataset, folds):
     patient_ids = dataset.csv['patientid'].unique()
     logging.info(f'found {len(patient_ids)} patients in the dataset')
-    test_folds_indices =\
-        get_test_folds_indices(len(patient_ids), folds)
-    for test_indices in test_folds_indices:
-        test_patient_ids = [patient_ids[i] for i in test_indices]
-        test_mapping = np.zeros(len(dataset))
-        for i in range(len(dataset)):
-            if dataset.csv['patientid'].iloc[i] in test_patient_ids:
-                test_mapping[i] = 1
-        train_indices = np.argwhere(test_mapping == 0).flatten()
-        test_indices = np.argwhere(test_mapping == 1).flatten()
-        train_dataset = xrv_datasets.SubsetDataset(dataset, train_indices)
-        test_dataset = xrv_datasets.SubsetDataset(dataset, test_indices)
-
+    folds_indices =\
+        get_folds_indices(len(patient_ids), folds)
+    folds = get_folds(dataset, folds)
+    for fold in folds:
+        train_dataset = xrv_datasets.SubsetDataset(dataset, fold['train'])
+        val_dataset = xrv_datasets.SubsetDataset(dataset, fold['val'])
+        test_dataset = xrv_datasets.SubsetDataset(dataset, fold['test'])
         assert len(set(train_dataset.csv['patientid'].unique()) &
                    set(test_dataset.csv['patientid'].unique())) == 0
-
-        yield train_dataset, test_dataset
+        yield train_dataset, val_dataset, test_dataset
 
 
 def calculate_performance_metrics(predictions,
@@ -80,7 +115,7 @@ def calculate_average_performance(performance_reports):
         for key in agg_result:
             agg_result[key] = 0.0
         for report in performance_reports:
-            if report[cl]['support'] > 0:
+            if 'AUC' not in report[cl] or type(report[cl]['AUC']) != str:
                 count += 1
                 for key in report[cl]:
                     agg_result[key] += report[cl][key]
@@ -93,14 +128,15 @@ def calculate_average_performance(performance_reports):
 
 
 def main():
-    d_covid19 = data.CombinedDataset()
+    d_covid19 = data.COVID19_Dataset()
+
     logging.info(f'entire dataset length is {len(d_covid19)}')
-    feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
+    feature_extractor = feature_extractors.FeatureExtractor()
     Model = models.LogisticRegression
 
     metrics_history = []
 
-    for fold_idx, (train_dataset, test_dataset) in \
+    for fold_idx, (train_dataset, val_dataset, test_dataset) in \
             enumerate(partitions_generator(d_covid19, 10)):
         logging.info(f'fold number {fold_idx}: '
                      f'train size is {len(train_dataset)} '

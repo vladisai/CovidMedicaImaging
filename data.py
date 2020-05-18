@@ -82,8 +82,8 @@ class ShenzhenDataset(Dataset):
                                   self.image_paths['filename'].iloc[idx]))
         img = xrv_datasets.normalize(img, self.MAX_VAL)
         # Add color channel
-        if len(img.shape)==3:
-            img=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        if len(img.shape) == 3:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img = img[None, :, :]
         if self.transform is not None:
             img = self.transform(img)
@@ -114,6 +114,7 @@ class COVID19_Dataset(xrv_datasets.COVID19_Dataset):
                          csvpath=self.COVID_19_DATASET_METADATA_PATH,
                          *args,
                          **kwargs)
+        np.random.shuffle(self.labels)
 
 
 class CombinedDataset(xrv_datasets.Merge_Dataset):
