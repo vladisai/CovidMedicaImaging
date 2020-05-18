@@ -3,7 +3,9 @@ from skimage import feature as F
 import cv2
 
 def prepare_image(image,target_size=(224,224)):
-  try: 
+  if len(image.shape)==3 and image.shape[0]==1:
+    image=image[0]
+  try:
     image=cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
   except:
     pass
@@ -24,7 +26,7 @@ def get_hog(image):
 
 def get_fft(image):
   image=prepare_image(image)
-  np.fft.restore_all()
+  # np.fft.restore_all()
   dft=np.fft.fft2(image)
   mag=np.asarray(20*np.log(np.abs(dft)))
   shifted=np.fft.fftshift(mag)

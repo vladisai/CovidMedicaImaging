@@ -1,28 +1,42 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 
-from feature_engineering import *
 import torchxrayvision as xrv
 
-class FeatureExtractor:
-    def __init__(self,lbp=True,hog=True,fft=True):
-        assert lbp or hog or fft, "no transformations specified"
-        self.hog=hog
-        self.lbp=lbp
-        self.fft=fft
 
-    def extract(self,dataset):
-        results=[]
+import feature_engineering
+
+
+class FeatureExtractor:
+    def __init__(self, lbp=True, hog=True, fft=True):
+        assert lbp or hog or fft, "no transformations specified"
+        self.hog = hog
+        self.lbp = lbp
+        self.fft = fft
+
+    def extract(self, dataset):
+        results = []
         for example in dataset:
-            result=[]
+            result = []
             if self.hog:
-                result=np.concatenate([result,get_hog(example['img']).reshape(-1)])
+                result = \
+                    np.concatenate([result,
+                                    feature_engineering.get_hog(example['img'])
+                                                       .reshape(-1)])
             if self.fft:
-                result=np.concatenate([result,get_fft(example['img']).reshape(-1)])
+                result = \
+                    np.concatenate([result,
+                                    feature_engineering.get_fft(example['img'])
+                                                       .reshape(-1)])
             if self.lbp:
-                result=np.concatenate([result,get_lbp(example['img']).reshape(-1)])
+                result = \
+                    np.concatenate([result,
+                                    feature_engineering.get_lbp(example['img'])
+                                                       .reshape(-1)])
             results.append(result)
         return np.array(results)
+
 
 class NeuralNetFeatureExtractor(FeatureExtractor):
 
@@ -38,6 +52,8 @@ class NeuralNetFeatureExtractor(FeatureExtractor):
         out = F.relu(features, inplace=True)
         out = F.adaptive_avg_pool2d(out, (1, 1)).view(features.size(0), -1)
         out = out.cpu()
+        # out = out[:, 500:501]
+        # out = torch.rand(batch['img'].shape[0], 3)
         # out = torch.cat([out, batch['lab']], axis=1)
         return out
 

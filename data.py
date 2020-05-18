@@ -1,9 +1,10 @@
 import os
 
+import cv2
 import pandas as pd
 import numpy as np
 from skimage.io import imread
-from torch.utils.data import Dataset, ConcatDataset
+from torch.utils.data import Dataset, DataLoader
 import torchvision
 
 from torchxrayvision import datasets as xrv_datasets
@@ -11,15 +12,19 @@ from torchxrayvision import datasets as xrv_datasets
 
 def get_labels(dataset):
     y = []
-    for sample in dataset:
-        y.append(sample['lab'])
-    y = np.stack(y)
+    loader = DataLoader(dataset, batch_size=16)
+    for batch in loader:
+        y.append(batch['lab'].numpy())
+    y = np.cat(y, axis=0)
     return y
 
 
 def get_default_transform():
-    return torchvision.transforms.Compose([xrv_datasets.XRayCenterCrop(),
-                                           xrv_datasets.XRayResizer(224)])
+    # return None
+    return torchvision.transforms.Compose([
+        xrv_datasets.XRayCenterCrop(),
+        xrv_datasets.XRayResizer(224, engine='cv2')
+    ])
 
 
 class ShenzhenDataset(Dataset):
@@ -28,8 +33,10 @@ class ShenzhenDataset(Dataset):
     Only the 'no fidining' images were selected.
     Contains 326 samples.
     """
-    DATA_PATH = '/misc/vlgscratch4/LecunGroup/vlad/machine_learning_chest_datasets/shenzhen'
-    IMAGES_PATH = os.path.join(DATA_PATH, 'CXR_png_resized')
+    DATA_PATH = \
+        '/misc/vlgscratch4/LecunGroup/vlad/'\
+        'machine_learning_chest_datasets/shenzhen'
+    IMAGES_PATH = os.path.join(DATA_PATH, 'CXR_png_resized_2')
     LABELS_PATH = os.path.join(DATA_PATH, 'labels.csv')
     MAX_VAL = 255
 
@@ -61,21 +68,30 @@ class ShenzhenDataset(Dataset):
         self.labels = np.tile(self.label, [len(self.image_paths), 1])
         self.csv = pd.DataFrame(np.arange(1000, 1000 + len(self.image_paths)),
                                 columns=['patientid'])
+        self.csv = pd.concat([self.csv, self.image_paths], axis=1)
+
+        # self.images = \
+        #     np.random.rand(len(self.image_paths), 1, 244, 244)\
+        #     .astype(np.float32) * 2048 - 1024
 
     def __len__(self):
         return len(self.image_paths)
 
     def __getitem__(self, idx):
         img = imread(os.path.join(self.IMAGES_PATH,
-                                  self.image_paths['path'].iloc[idx]))
+                                  self.image_paths['filename'].iloc[idx]))
         img = xrv_datasets.normalize(img, self.MAX_VAL)
         # Add color channel
+        if len(img.shape)==3:
+            img=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
         img = img[None, :, :]
         if self.transform is not None:
             img = self.transform(img)
         if self.data_aug is not None:
             img = self.data_aug(img)
-        return {'img': img, 'lab': self.label, 'idx': idx}
+        # img = self.images[idx]
+
+        return {'img': img, 'lab': self.labels[idx], 'idx': idx}
 
 
 class COVID19_Dataset(xrv_datasets.COVID19_Dataset):
@@ -85,10 +101,13 @@ class COVID19_Dataset(xrv_datasets.COVID19_Dataset):
     Contains 194 samples.
     """
 
-    COVID_19_DATASET_PATH = '/misc/vlgscratch4/LecunGroup/vlad/machine_learning_chest_datasets/covid-chestxray-dataset'
-    COVID_19_DATASET_IMAGES_PATH = os.path.join(COVID_19_DATASET_PATH, 'images')
-    COVID_19_DATASET_METADATA_PATH = os.path.join(
-        COVID_19_DATASET_PATH, 'metadata.csv')
+    COVID_19_DATASET_PATH = \
+        '/misc/vlgscratch4/LecunGroup/vlad/'\
+        'machine_learning_chest_datasets/covid-chestxray-dataset'
+    COVID_19_DATASET_IMAGES_PATH = \
+        os.path.join(COVID_19_DATASET_PATH, 'images_resized')
+    COVID_19_DATASET_METADATA_PATH = \
+        os.path.join(COVID_19_DATASET_PATH, 'metadata.csv')
 
     def __init__(self, *args, **kwargs):
         super().__init__(imgpath=self.COVID_19_DATASET_IMAGES_PATH,

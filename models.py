@@ -28,6 +28,7 @@ class SafeOneClassMixin:
     classes we get all training samples with label 0.
     Maybe remove those classes?
     """
+
     def fit(self, X, y, **kw):
         self._single_class = False
         if len(np.unique(y)) == 1:
@@ -54,21 +55,24 @@ class LogisticRegression(Model):
         pass
 
     def fit(self, X, y):
-        self.model = MultiOutputClassifier(self.SafeOneClassLogisticRegression()).fit(X, y)
+        self.model = MultiOutputClassifier(
+            self.SafeOneClassLogisticRegression()).fit(X, y)
 
     def predict_proba(self, X):
         return self.model.predict_proba(X)
-    def predict(self,X):
+
+    def predict(self, X):
         return self.model.predict(X)
+
 
 class KNeighborsClassifier(Model):
     class SafeOneClassKNN(SafeOneClassMixin, KNeighborsClassifier):
         pass
 
-    def fit(self,X,y):
-        self.model = MultiOutputClassifier(self.SafeOneClassKNN()).fit(X,y)
+    def fit(self, X, y):
+        self.model = MultiOutputClassifier(self.SafeOneClassKNN()).fit(X, y)
 
-    def predict_proba(self,X):
+    def predict_proba(self, X):
         return self.model.predict_proba(X)
     def predict(self,X):
         return self.model.predict(X)
