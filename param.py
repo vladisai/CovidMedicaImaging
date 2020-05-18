@@ -15,6 +15,7 @@ class Config:
     fft = False
     test = False
     feature_num = 10000
+    data_aug = False
 
 args = Config()
 
