@@ -14,6 +14,7 @@ def parse_args():
         parser.add_argument('--lbp', action='store_const', default=False, const=True)
         parser.add_argument('--hog', action='store_const', default=False, const=True)
         parser.add_argument('--fft', action='store_const', default=False, const=True)
+        parser.add_argument('--nn', action='store_const', default=False, const=True)
         parser.add_argument('--data_aug', action='store_const', default=False, const=True)
         parser.add_argument('--test', action='store_const', default=False, const=True)
         args = parser.parse_args()

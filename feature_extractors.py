@@ -9,18 +9,21 @@ import feature_engineering
 
 
 class FeatureExtractor:
-    def __init__(self, lbp=True, hog=True, fft=True, args_num=10000):
-        assert lbp or hog or fft, "no transformations specified"
+    def __init__(self, lbp=True, hog=True, fft=True, nn=False, args_num=10000):
+        assert lbp or hog or fft or nn, "no transformations specified"
         self.hog = hog
         self.lbp = lbp
         self.fft = fft
+        self.nn = nn
+        if nn:
+            self.nn_extractor = NeuralNetFeatureExtractor()
         self.args_num=args_num
 
     def extract(self, dataset):
         results = []
         if self.fft or self.hog:
             comp_share=self.args_num/(self.fft+self.hog)
-        print(f'Features to be extracted: hog={self.hog}, lbp={self.lbp}, fft={self.fft}')
+        print(f'Features to be extracted: hog={self.hog}, lbp={self.lbp}, fft={self.fft}, nn={self.nn}')
         for example in dataset:
             result = []
             if self.hog:
@@ -39,8 +42,12 @@ class FeatureExtractor:
                                     feature_engineering.get_lbp(example['img'])
                                                        .reshape(-1)])
             results.append(result)
+        results = np.array(results)
+        if self.nn:
+            nn_features = self.nn_extractor.extract(dataset)
+            results = np.concatenate([results, nn_features], axis=1)
         print(f'Shape of the features after extraction: {np.shape(np.array(results))}')
-        return np.array(results)
+        return results
 
 
 class NeuralNetFeatureExtractor(FeatureExtractor):
