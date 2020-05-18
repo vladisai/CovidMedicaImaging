@@ -48,7 +48,8 @@ def partitions_generator(dataset, folds):
 def main():
     d_covid19 = data.CombinedDataset()
     logging.info(f'entire dataset length is {len(d_covid19)}')
-    feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
+    #feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
+    feature_extractor = feature_extractors.FeatureExtractor()
     Model = models.LogisticRegression
 
     performance_history = [[] for _ in range(len(d_covid19.pathologies))]
@@ -69,9 +70,9 @@ def main():
         assert features_test.shape[0] == len(test_dataset)
         assert labels_test.shape[0] == len(test_dataset)
         
-        feat_mean_train = np.mean(features_train, axis = 0)
-        features_train = PCA(features_train-feat_mean_train)
-        features_test = PCA(features_test-feat_mean_train)
+        #feat_mean_train = np.mean(features_train, axis = 0)
+        #features_train = PCA(features_train-feat_mean_train)
+        #features_test = PCA(features_test-feat_mean_train)
 
 
         model = Model()
