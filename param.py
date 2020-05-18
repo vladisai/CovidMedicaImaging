@@ -4,21 +4,6 @@ import random
 import numpy as np
 import torch
 
-class Config:
-    """This is a hack class I need to run this stuff in jupyter"""
-    seed = 20
-    classifier = 'LogisticRegression'
-    PCA = False
-    pca_out_dim = 1000
-    lbp = True
-    hog = False
-    fft = False
-    test = False
-    feature_num = 10000
-    data_aug = False
-
-args = Config()
-
 def parse_args():
         parser = argparse.ArgumentParser()
         parser.add_argument('--seed', type=int, default=20, help='random seed')
@@ -31,6 +16,7 @@ def parse_args():
         parser.add_argument('--fft', action='store_const', default=False, const=True)
         parser.add_argument('--test', action='store_true', default=False, const=True)
         parser.add_argument('--data_aug', action='store_const', default=False, const=True)
+        parser.add_argument('--test', action='store_const', default=False, const=True)
         args = parser.parse_args()
 
         # Set seeds
@@ -40,5 +26,4 @@ def parse_args():
 
         return args
 
-if __name__ == '__main__':
-    args = parse_args()
+args = parse_args()

@@ -1,6 +1,7 @@
 import numpy as np
 from skimage import feature as F
 import cv2
+from param import args 
 
 def prepare_image(image,target_size=(224,224)):
   if len(image.shape)==3 and image.shape[0]==1:
