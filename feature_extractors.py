@@ -14,21 +14,24 @@ class FeatureExtractor:
         self.hog = hog
         self.lbp = lbp
         self.fft = fft
+        self.args_num=args_num
 
     def extract(self, dataset):
         results = []
+        if self.fft or self.hog:
+            comp_share=self.args_num/(self.fft+self.hog)
         print(f'Features to be extracted: hog={self.hog}, lbp={self.lbp}, fft={self.fft}')
         for example in dataset:
             result = []
             if self.hog:
                 result = \
                     np.concatenate([result,
-                                    feature_engineering.get_hog(example['img'])
+                                    feature_engineering.get_hog(example['img'],comp_share)
                                                        .reshape(-1)])
             if self.fft:
                 result = \
                     np.concatenate([result,
-                                    feature_engineering.get_fft(example['img'])
+                                    feature_engineering.get_fft(example['img'],comp_share)
                                                        .reshape(-1)])
             if self.lbp:
                 result = \
