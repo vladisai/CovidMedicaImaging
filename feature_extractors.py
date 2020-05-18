@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import numpy as np
 
 import torchxrayvision as xrv
-
+from param import args
 
 import feature_engineering
 
