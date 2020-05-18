@@ -1,6 +1,6 @@
 import os
 import logging
-
+from sklearn.decomposition import PCA
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import classification_report
 import numpy as np
@@ -13,11 +13,11 @@ import json
 from param import args
 
 
-def PCA(X):
-    cov = np.dot(X.T, X) / X.shape[0]
-    U, S, V = np.linalg.svd(cov)
-    Xrot_reduced = np.dot(X, U[:, :args.pca_out_dim])
-    return Xrot_reduced
+#def PCA(X):
+#    cov = np.dot(X.T, X) / X.shape[0]
+#    U, S, V = np.linalg.svd(cov)
+#    Xrot_reduced = np.dot(X, U[:, :args.pca_out_dim])
+#    return Xrot_reduced
 
 
 def get_folds_indices(dataset_length, folds):
@@ -170,12 +170,24 @@ def main():
 
             features_eval = feature_extractor.extract(test_dataset)
             labels_eval = test_dataset.labels
+        
+        feat_mean_train = np.mean(features_train, axis=0)
+        features_train_centered = features_train - feat_mean_train
+        features_test_centered = features_eval - feat_mean_train
 
-        if args.PCA:
+        feat_std_train = np.std(features_train, axis=0)
+        features_train = features_train_centered/(feat_std_train+1e-8)
+        features_eval = features_test_centered/(feat_std_train+1e-8)
+
+        if args.run_PCA:
+            pca = PCA(n_components=args.pca_out_dim)
+            pca.fit_transform(features_train)
+            pca.transform(features_eval)
+
             print("Running PCA")
-            feat_mean_train = np.mean(features_train, axis=0)
-            features_train = PCA(features_train-feat_mean_train)
-            features_eval = PCA(features_eval-feat_mean_train)
+            #feat_mean_train = np.mean(features_train, axis=0)
+            #features_train = PCA(features_train-feat_mean_train)
+            #features_eval = PCA(features_eval-feat_mean_train)
 
         model = Model()
         model.fit(features_train, labels_train)
