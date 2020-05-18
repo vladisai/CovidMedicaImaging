@@ -94,10 +94,11 @@ def calculate_average_performance(performance_reports):
 
 
 def main():
-    d_covid19 = data.CombinedDataset()
+    #d_covid19 = data.CombinedDataset()
+    d_covid19 = data.COVID19_Dataset()
     logging.info(f'entire dataset length is {len(d_covid19)}')
     #feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
-    feature_extractor = feature_extractors.FeatureExtractor()
+    feature_extractor = feature_extractors.FeatureExtractor(lbp=args.lbp, hog=args.hog,fft=args.fft)
     Model = models.LogisticRegression
 
     metrics_history = []
