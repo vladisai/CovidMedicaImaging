@@ -98,7 +98,7 @@ def calculate_performance_metrics(predictions,
             auc[i] = 'Undefined - only one label in test'
     report_result = classification_report(true_labels,
                                           predictions_hard,
-                                          target_names=classes,
+                                          target_names=['no Covid', 'Covid'],
                                           output_dict=True)
     for i, cl in enumerate(classes):
         report_result[cl]['AUC'] = auc[i]
@@ -106,7 +106,7 @@ def calculate_performance_metrics(predictions,
 
 
 def calculate_average_performance(performance_reports):
-    classes = list(performance_reports[0].keys())
+    classes = ['no Covid', 'Covid'] # list(performance_reports[0].keys())
     final_result = {}
     for cl in classes:
         count = 0
@@ -128,6 +128,9 @@ def calculate_average_performance(performance_reports):
 
 def main():
     d_covid19 = data.COVID19_Dataset()
+
+    d_covid19.pathologies = ['Covid']
+    d_covid19.labels = d_covid19.labels[:, 2][:, None]
     logging.info(f'entire dataset length is {len(d_covid19)}')
     # feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
     feature_extractor = \
