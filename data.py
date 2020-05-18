@@ -1,6 +1,5 @@
 import os
 
-import torch
 import pandas as pd
 import numpy as np
 from skimage.io import imread
@@ -12,7 +11,7 @@ from torchxrayvision import datasets as xrv_datasets
 
 def get_labels(dataset):
     y = []
-    loader = DataLoader(dataset, batch_size=16, num_workers=8)
+    loader = DataLoader(dataset, batch_size=16)
     for batch in loader:
         y.append(batch['lab'].numpy())
     y = np.cat(y, axis=0)
@@ -20,9 +19,11 @@ def get_labels(dataset):
 
 
 def get_default_transform():
-    return None
-    # return torchvision.transforms.Compose([xrv_datasets.XRayCenterCrop(),
-    #                                        xrv_datasets.XRayResizer(224)])
+    # return None
+    return torchvision.transforms.Compose([
+        xrv_datasets.XRayCenterCrop(),
+        xrv_datasets.XRayResizer(224, engine='cv2')
+    ])
 
 
 class ShenzhenDataset(Dataset):
@@ -31,7 +32,9 @@ class ShenzhenDataset(Dataset):
     Only the 'no fidining' images were selected.
     Contains 326 samples.
     """
-    DATA_PATH = '/misc/vlgscratch4/LecunGroup/vlad/machine_learning_chest_datasets/shenzhen'
+    DATA_PATH = \
+        '/misc/vlgscratch4/LecunGroup/vlad/'\
+        'machine_learning_chest_datasets/shenzhen'
     IMAGES_PATH = os.path.join(DATA_PATH, 'CXR_png_resized_2')
     LABELS_PATH = os.path.join(DATA_PATH, 'labels.csv')
     MAX_VAL = 255
@@ -95,22 +98,19 @@ class COVID19_Dataset(xrv_datasets.COVID19_Dataset):
     Contains 194 samples.
     """
 
-    COVID_19_DATASET_PATH = '/misc/vlgscratch4/LecunGroup/vlad/machine_learning_chest_datasets/covid-chestxray-dataset'
-    COVID_19_DATASET_IMAGES_PATH = os.path.join(COVID_19_DATASET_PATH, 'images_resized')
-    COVID_19_DATASET_METADATA_PATH = os.path.join(
-        COVID_19_DATASET_PATH, 'metadata.csv')
+    COVID_19_DATASET_PATH = \
+        '/misc/vlgscratch4/LecunGroup/vlad/'\
+        'machine_learning_chest_datasets/covid-chestxray-dataset'
+    COVID_19_DATASET_IMAGES_PATH = \
+        os.path.join(COVID_19_DATASET_PATH, 'images_resized')
+    COVID_19_DATASET_METADATA_PATH = \
+        os.path.join(COVID_19_DATASET_PATH, 'metadata.csv')
 
     def __init__(self, *args, **kwargs):
         super().__init__(imgpath=self.COVID_19_DATASET_IMAGES_PATH,
                          csvpath=self.COVID_19_DATASET_METADATA_PATH,
                          *args,
                          **kwargs)
-        # self.images = \
-        #     np.random.rand(len(self.csv), 1, 244, 244).astype(np.float32) * 2048 - 1024
-
-    # def __getitem__(self, idx):
-    #     img = self.images[idx]
-    #     return {"img": img, "lab": self.labels[idx], "idx": idx}
 
 
 class CombinedDataset(xrv_datasets.Merge_Dataset):

@@ -3,7 +3,7 @@ from skimage import feature as F
 import cv2
 
 def prepare_image(image,target_size=(224,224)):
-  try: 
+  try:
     image=cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
   except:
     pass

@@ -1,28 +1,42 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 
-from feature_engineering import *
 import torchxrayvision as xrv
 
-class FeatureExtractor:
-    def __init__(self,lbp=True,hog=True,fft=True):
-        assert lbp or hog or fft, "no transformations specified"
-        self.hog=hog
-        self.lbp=lbp
-        self.fft=fft
 
-    def extract(self,dataset):
-        results=[]
+import feature_engineering
+
+
+class FeatureExtractor:
+    def __init__(self, lbp=True, hog=True, fft=True):
+        assert lbp or hog or fft, "no transformations specified"
+        self.hog = hog
+        self.lbp = lbp
+        self.fft = fft
+
+    def extract(self, dataset):
+        results = []
         for example in dataset:
-            result=[]
+            result = []
             if self.hog:
-                result=np.concatenate([result,get_hog(example['img']).reshape(-1)])
+                result = \
+                    np.concatenate([result,
+                                    feature_engineering.get_hog(example['img'])
+                                                       .reshape(-1)])
             if self.fft:
-                result=np.concatenate([result,get_fft(example['img']).reshape(-1)])
+                result = \
+                    np.concatenate([result,
+                                    feature_engineering.get_fft(example['img'])
+                                                       .reshape(-1)])
             if self.lbp:
-                result=np.concatenate([result,get_lbp(example['img']).reshape(-1)])
+                result = \
+                    np.concatenate([result,
+                                    feature_engineering.get_lbp(example['img'])
+                                                       .reshape(-1)])
             results.append(result)
         return np.array(results)
+
 
 class NeuralNetFeatureExtractor(FeatureExtractor):
 
@@ -45,7 +59,7 @@ class NeuralNetFeatureExtractor(FeatureExtractor):
 
     def extract(self, dataset):
         """Returns numpy array with 1024 features for each example"""
-        loader = torch.utils.data.DataLoader(dataset, batch_size=16, num_workers=8)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=16)
         results = []
         # I'm not sure why no grad is necessary here.
         # Calling model.eval() doesn't seem to work, model runs out

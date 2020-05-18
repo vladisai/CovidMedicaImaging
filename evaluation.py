@@ -101,7 +101,7 @@ def main():
     metrics_history = []
 
     for fold_idx, (train_dataset, test_dataset) in \
-            enumerate(partitions_generator(d_covid19, 2)):
+            enumerate(partitions_generator(d_covid19, 10)):
         logging.info(f'fold number {fold_idx}: '
                      f'train size is {len(train_dataset)} '
                      f'test size is {len(test_dataset)}')
