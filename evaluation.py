@@ -98,7 +98,7 @@ def main():
     d_covid19 = data.COVID19_Dataset()
     logging.info(f'entire dataset length is {len(d_covid19)}')
     #feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
-    feature_extractor = feature_extractors.FeatureExtractor(lbp=args.lbp, hog=args.hog,fft=args.fft)
+    feature_extractor = feature_extractors.FeatureExtractor(lbp=args.lbp, hog=args.hog,fft=args.fft,args.feature_num)
     Model = models.LogisticRegression
 
     metrics_history = []
