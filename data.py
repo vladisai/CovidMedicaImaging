@@ -67,7 +67,7 @@ class ShenzhenDataset(Dataset):
 
     def __getitem__(self, idx):
         img = imread(os.path.join(self.IMAGES_PATH,
-                                  self.image_paths['path'].iloc[idx]))
+                                  self.image_paths['filename'].iloc[idx]))
         img = xrv_datasets.normalize(img, self.MAX_VAL)
         # Add color channel
         img = img[None, :, :]
