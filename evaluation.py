@@ -140,6 +140,7 @@ def main():
     Model = models.LogisticRegression
 
     metrics_history = []
+    train_metrics_history = []
 
     for fold_idx, (train_dataset, val_dataset, test_dataset) in \
             enumerate(partitions_generator(d_covid19, 10)):
@@ -178,15 +179,25 @@ def main():
 
         predictions_hard = model.predict(features_eval)
         predictions = model.predict_proba(features_eval)
-
         metrics = calculate_performance_metrics(predictions,
                                                 predictions_hard,
                                                 labels_eval,
                                                 test_dataset.pathologies)
         metrics_history.append(metrics)
-        logging.info(json.dumps(metrics, indent=4))
+
+        train_predictions_hard = model.predict(features_train)
+        train_predictions = model.predict_proba(features_train)
+        train_metrics = calculate_performance_metrics(train_predictions,
+                                                      train_predictions_hard,
+                                                      labels_train,
+                                                      test_dataset.pathologies)
+        train_metrics_history.append(train_metrics)
+        # logging.info(json.dumps(metrics, indent=4))
 
     average_metrics = calculate_average_performance(metrics_history)
+    average_train_metrics = calculate_average_performance(train_metrics_history)
+    logging.info('Average train perf across all folds:')
+    logging.info(json.dumps(average_train_metrics, indent=4))
     logging.info('Average across all folds:')
     logging.info(json.dumps(average_metrics, indent=4))
 
