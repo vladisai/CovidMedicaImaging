@@ -10,12 +10,13 @@ import feature_extractors
 import models
 import data
 import json
+from param import args
 
 
 def PCA(X):
     cov = np.dot(X.T, X) / X.shape[0]
     U, S, V = np.linalg.svd(cov)
-    Xrot_reduced = np.dot(X, U[:, :500])
+    Xrot_reduced = np.dot(X, U[:, :args.pca_out_dim])
     return Xrot_reduced
 
 
@@ -129,9 +130,10 @@ def calculate_average_performance(performance_reports):
 
 def main():
     d_covid19 = data.COVID19_Dataset()
-
     logging.info(f'entire dataset length is {len(d_covid19)}')
-    feature_extractor = feature_extractors.FeatureExtractor()
+    #feature_extractor = feature_extractors.NeuralNetFeatureExtractor()
+    feature_extractor = feature_extractors.FeatureExtractor(lbp=args.lbp, hog=args.hog,fft=args.fft)
+
     Model = models.LogisticRegression
 
     metrics_history = []
@@ -152,9 +154,11 @@ def main():
         assert features_test.shape[0] == len(test_dataset)
         assert labels_test.shape[0] == len(test_dataset)
 
-        # feat_mean_train = np.mean(features_train, axis=0)
-        # features_train = PCA(features_train-feat_mean_train)
-        # features_test = PCA(features_test-feat_mean_train)
+        if args.PCA:
+            print("Running PCA")
+            feat_mean_train = np.mean(features_train, axis=0)
+            features_train = PCA(features_train-feat_mean_train)
+            features_test = PCA(features_test-feat_mean_train)
 
         model = Model()
         model.fit(features_train, labels_train)

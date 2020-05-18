@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 import data
 
 
@@ -73,6 +74,13 @@ class KNeighborsClassifier(Model):
 
     def predict_proba(self, X):
         return self.model.predict_proba(X)
+    def predict(self,X):
+        return self.model.predict(X)
 
-    def predict(self, X):
+class SVC(Model):
+    class SafeOneClassSVM(SafeOneClassMixin, SVC):
+        pass 
+    def fit(self,X,y):                                                                                                   
+        self.model = MultiOutputClassifier(self.SafeOneClassSVM()).fit(X,y)
+    def predict(self,X): 
         return self.model.predict(X)
