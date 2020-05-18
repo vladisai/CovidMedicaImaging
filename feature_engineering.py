@@ -1,5 +1,5 @@
 import numpy as np
-from skimage import feature as F
+from skimage import feature
 import cv2
 
 def prepare_image(image,target_size=(224,224)):
@@ -13,13 +13,13 @@ def prepare_image(image,target_size=(224,224)):
 
 def get_lbp(image,P=8,R=1):
   image=prepare_image(image)
-  lbp_image=F.local_binary_pattern(image,R=R,P=P)
+  lbp_image=feature.local_binary_pattern(image,R=R,P=P)
   lbp_hist=np.histogram(lbp_image.reshape(-1),bins=256,range=(0,256))[0]
   return lbp_hist
 
 def get_hog(image):
   image=prepare_image(image)
-  hog_feature=F.hog(image,orientations=9,pixels_per_cell=(8,8),visualize=False,feature_vector=True)
+  hog_feature=feature.hog(image,orientations=9,pixels_per_cell=(8,8),visualize=False,feature_vector=True)
   return np.array(hog_feature.reshape(-1))
 
 def get_fft(image):
