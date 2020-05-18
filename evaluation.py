@@ -138,6 +138,7 @@ def main():
             lbp=args.lbp,
             hog=args.hog,
             fft=args.fft,
+            nn=args.nn,
             args_num=args.feature_num
         )
     Model = models.LogisticRegression
