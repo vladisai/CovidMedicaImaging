@@ -19,6 +19,17 @@ def get_labels(dataset):
     return y
 
 
+def get_data_aug():
+    return torchvision.transforms.Compose([
+        torchvision.transforms.ToPILImage(),
+        torchvision.transforms.RandomHorizontalFlip(p=0.5),
+        torchvision.transforms.RandomRotation(90),
+        torchvision.transforms.RandomVerticalFlip(p=0.5),
+        torchvision.transforms.ColorJitter(),
+        torchvision.transforms.RandomAffine(90),
+    ])
+
+
 def get_default_transform():
     # return None
     return torchvision.transforms.Compose([
@@ -80,6 +91,9 @@ class ShenzhenDataset(Dataset):
     def __getitem__(self, idx):
         img = imread(os.path.join(self.IMAGES_PATH,
                                   self.image_paths['filename'].iloc[idx]))
+        if self.data_aug is not None:
+            img = self.data_aug(img)
+            img = np.array(img)
         img = xrv_datasets.normalize(img, self.MAX_VAL)
         # Add color channel
         if len(img.shape) == 3:
@@ -108,13 +122,31 @@ class COVID19_Dataset(xrv_datasets.COVID19_Dataset):
         os.path.join(COVID_19_DATASET_PATH, 'images_resized')
     COVID_19_DATASET_METADATA_PATH = \
         os.path.join(COVID_19_DATASET_PATH, 'metadata.csv')
+    MAX_VAL = 255
 
     def __init__(self, *args, **kwargs):
         super().__init__(imgpath=self.COVID_19_DATASET_IMAGES_PATH,
                          csvpath=self.COVID_19_DATASET_METADATA_PATH,
                          *args,
                          **kwargs)
-        np.random.shuffle(self.labels)
+
+    def __getitem__(self, idx):
+        imgid = self.csv['filename'].iloc[idx]
+        img_path = os.path.join(self.imgpath, imgid)
+        img = imread(img_path)
+        if self.data_aug is not None:
+            print("Adding data augmentation")
+            img = self.data_aug(img)
+            img = np.array(img)
+        img = xrv_datasets.normalize(img, self.MAX_VAL)
+        if len(img.shape) > 2:
+            img = img[:, :, 0]
+        if len(img.shape) < 2:
+            print("error, dimension lower than 2 for image")
+        img = img[None, :, :]
+        if self.transform is not None:
+            img = self.transform(img)
+        return {"img": img, "lab": self.labels[idx], "idx": idx}
 
 
 class CombinedDataset(xrv_datasets.Merge_Dataset):

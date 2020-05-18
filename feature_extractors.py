@@ -17,6 +17,7 @@ class FeatureExtractor:
 
     def extract(self, dataset):
         results = []
+        print(f'Features to be extracted: hog={self.hog}, lbp={self.lbp}, fft={self.fft}')
         for example in dataset:
             result = []
             if self.hog:
@@ -35,6 +36,7 @@ class FeatureExtractor:
                                     feature_engineering.get_lbp(example['img'])
                                                        .reshape(-1)])
             results.append(result)
+        print(f'Shape of the features after extraction: {np.shape(np.array(results))}')
         return np.array(results)
 
 

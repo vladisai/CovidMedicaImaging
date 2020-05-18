@@ -146,6 +146,11 @@ def main():
         logging.info(f'fold number {fold_idx}: '
                      f'train size is {len(train_dataset)} '
                      f'test size is {len(test_dataset)}')
+        
+        if args.data_aug:
+            train_dataset.dataset.data_aug = data.get_data_aug()
+            train_dataset.dataset.data_aug = data.get_data_aug()
+
 
         if not args.test:
             features_train = feature_extractor.extract(train_dataset)
