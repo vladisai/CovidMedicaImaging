@@ -126,7 +126,7 @@ def calculate_average_performance(performance_reports):
     return final_result
 
 
-def main():
+def main(model=models.LogisticRegression):
     d_covid19 = data.COVID19_Dataset()
 
     d_covid19.pathologies = ['Covid']
@@ -141,7 +141,7 @@ def main():
             nn=args.nn,
             args_num=args.feature_num
         )
-    Model = models.LogisticRegression
+    Model = model
 
     metrics_history = []
     train_metrics_history = []
@@ -220,16 +220,15 @@ def main():
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
-    for lbp in [True]:
-        for hog in [True, False]:
-            for fft in [True, False]:
-                for run_PCA in [True, False]:
-                    for nn in [True, False]:
-                        args.lbp=lbp
-                        args.hog = hog
-                        args.fft = fft
-                        args.run_PCA = run_PCA
-                        args.nn = nn
-                        print(args)
-                        main()
+    for classifier in [models.LogisticRegression, models.DecisionTreeClassifier, models.RandomForestClassifier, \
+            models.AdaBoostClassifier, models.GaussianNB, models.QuadraticDiscriminantAnalysis, \
+            models.KNeighborsClassifier, models.SVC]:
+        args.classifier = str(classifier)
+        args.lbp = True
+        args.fft = True
+        args.nn = True
+        args.hog = True
+        args.run_PCA = True
+        print(args)
+        main(model=classifier)
 

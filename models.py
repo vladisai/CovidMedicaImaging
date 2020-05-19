@@ -4,6 +4,11 @@ from sklearn.multioutput import MultiOutputClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 import data
 
 
@@ -81,6 +86,72 @@ class SVC(Model):
     class SafeOneClassSVM(SafeOneClassMixin, SVC):
         pass 
     def fit(self,X,y):                                                                                                   
+        self.model = MultiOutputClassifier(self.SafeOneClassSVM(probability=True)).fit(X,y)
+    def predict(self,X): 
+        return self.model.predict(X)
+
+    def predict_proba(self, X):
+        return self.model.predict_proba(X)
+
+class SVC(Model):
+    class SafeOneClassSVM(SafeOneClassMixin, SVC):
+        pass 
+    def fit(self,X,y):                                                                                                   
         self.model = MultiOutputClassifier(self.SafeOneClassSVM()).fit(X,y)
     def predict(self,X): 
         return self.model.predict(X)
+
+    def predict_proba(self, X):
+        return self.model.predict_proba(X)
+
+class DecisionTreeClassifier(Model):
+    class SafeOneClassDT(SafeOneClassMixin, DecisionTreeClassifier):
+        pass 
+    def fit(self,X,y):                                                                                                   
+        self.model = MultiOutputClassifier(self.SafeOneClassDT()).fit(X,y)
+    def predict(self,X): 
+        return self.model.predict(X)
+
+    def predict_proba(self, X):
+        return self.model.predict_proba(X)
+class RandomForestClassifier(Model):
+    class SafeOneClassRF(SafeOneClassMixin, RandomForestClassifier):
+        pass 
+    def fit(self,X,y):                                                                                                   
+        self.model = MultiOutputClassifier(self.SafeOneClassRF()).fit(X,y)
+    def predict(self,X): 
+        return self.model.predict(X)
+
+    def predict_proba(self, X):
+        return self.model.predict_proba(X)
+class AdaBoostClassifier(Model):
+    class SafeOneClassAB(SafeOneClassMixin, AdaBoostClassifier):
+        pass 
+    def fit(self,X,y):                                                                                                   
+        self.model = MultiOutputClassifier(self.SafeOneClassAB()).fit(X,y)
+    def predict(self,X): 
+        return self.model.predict(X)
+
+    def predict_proba(self, X):
+        return self.model.predict_proba(X)
+class GaussianNB(Model):
+    class SafeOneClassNB(SafeOneClassMixin, GaussianNB):
+        pass 
+    def fit(self,X,y):                                                                                                   
+        self.model = MultiOutputClassifier(self.SafeOneClassNB()).fit(X,y)
+    def predict(self,X): 
+        return self.model.predict(X)
+
+    def predict_proba(self, X):
+        return self.model.predict_proba(X)
+
+class QuadraticDiscriminantAnalysis(Model):
+    class SafeOneClassQDA(SafeOneClassMixin, QuadraticDiscriminantAnalysis):
+        pass 
+    def fit(self,X,y):                                                                                                   
+        self.model = MultiOutputClassifier(self.SafeOneClassQDA()).fit(X,y)
+    def predict(self,X): 
+        return self.model.predict(X)
+    
+    def predict_proba(self, X):
+        return self.model.predict_proba(X)

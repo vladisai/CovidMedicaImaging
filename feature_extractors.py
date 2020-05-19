@@ -23,7 +23,7 @@ class FeatureExtractor:
         results = []
         if self.fft or self.hog:
             comp_share=self.args_num/(self.fft+self.hog)
-        print(f'Features to be extracted: hog={self.hog}, lbp={self.lbp}, fft={self.fft}, nn={self.nn}')
+        #print(f'Features to be extracted: hog={self.hog}, lbp={self.lbp}, fft={self.fft}, nn={self.nn}')
         for example in dataset:
             result = []
             if self.hog:
@@ -46,7 +46,7 @@ class FeatureExtractor:
         if self.nn:
             nn_features = self.nn_extractor.extract(dataset)
             results = np.concatenate([results, nn_features], axis=1)
-        print(f'Shape of the features after extraction: {np.shape(np.array(results))}')
+        #print(f'Shape of the features after extraction: {np.shape(np.array(results))}')
         return results
 
 
