@@ -79,8 +79,8 @@ class KNeighborsClassifier(Model):
 
 class SVC(Model):
     class SafeOneClassSVM(SafeOneClassMixin, SVC):
-        pass 
-    def fit(self,X,y):                                                                                                   
+        pass
+    def fit(self,X,y):
         self.model = MultiOutputClassifier(self.SafeOneClassSVM()).fit(X,y)
-    def predict(self,X): 
+    def predict(self,X):
         return self.model.predict(X)
