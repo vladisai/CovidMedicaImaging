@@ -84,21 +84,10 @@ class KNeighborsClassifier(Model):
 
 class SVC(Model):
     class SafeOneClassSVM(SafeOneClassMixin, SVC):
-        pass 
-    def fit(self,X,y):                                                                                                   
-        self.model = MultiOutputClassifier(self.SafeOneClassSVM(probability=True)).fit(X,y)
-    def predict(self,X): 
-        return self.model.predict(X)
-
-    def predict_proba(self, X):
-        return self.model.predict_proba(X)
-
-class SVC(Model):
-    class SafeOneClassSVM(SafeOneClassMixin, SVC):
-        pass 
-    def fit(self,X,y):                                                                                                   
+        pass
+    def fit(self,X,y):
         self.model = MultiOutputClassifier(self.SafeOneClassSVM()).fit(X,y)
-    def predict(self,X): 
+    def predict(self,X):
         return self.model.predict(X)
 
     def predict_proba(self, X):
@@ -152,6 +141,5 @@ class QuadraticDiscriminantAnalysis(Model):
         self.model = MultiOutputClassifier(self.SafeOneClassQDA()).fit(X,y)
     def predict(self,X): 
         return self.model.predict(X)
-    
     def predict_proba(self, X):
         return self.model.predict_proba(X)

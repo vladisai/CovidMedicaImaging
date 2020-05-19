@@ -1,5 +1,8 @@
 import os
 import logging
+import pickle
+import json
+
 from sklearn.decomposition import PCA
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import classification_report
@@ -9,15 +12,7 @@ from torchxrayvision import datasets as xrv_datasets
 import feature_extractors
 import models
 import data
-import json
 from param import args
-
-
-#def PCA(X):
-#    cov = np.dot(X.T, X) / X.shape[0]
-#    U, S, V = np.linalg.svd(cov)
-#    Xrot_reduced = np.dot(X, U[:, :args.pca_out_dim])
-#    return Xrot_reduced
 
 
 def get_folds_indices(dataset_length, folds):
@@ -33,55 +28,63 @@ def get_folds_indices(dataset_length, folds):
 
 
 def get_folds(dataset, folds):
-    path = f'./folds_{len(dataset)}_{folds}'
-    if os.path.exists(path + '.npy'):
+    path = f'./folds2_{len(dataset)}_{folds}'
+    if os.path.exists(path):
         logging.info(f'Loading folds from {path}')
-        return np.load(path + '.npy', allow_pickle=True)
+        with open(path, 'rb') as f:
+            return pickle.load(f)
     logging.info(f'Building folds')
 
-    saved_folds = []
     patient_ids = dataset.csv['patientid'].unique()
     folds_indices =\
         get_folds_indices(len(patient_ids), folds)
 
-    for i in range(len(folds_indices)):
-        test_indices = folds_indices[i]
-        nxt = (i + 1) % len(folds_indices)
-        val_indices = folds_indices[nxt]
+    saved_folds = {'test': [], 'folds': []}
 
-        test_patient_ids = [patient_ids[i] for i in test_indices]
-        val_patient_ids = [patient_ids[i] for i in val_indices]
-
-        fold_mapping = np.full(len(dataset), 'train')
+    def patient_indices_to_dataset_indices(indices):
+        result_patient_ids = [patient_ids[i] for i in indices]
+        result_dataset_indices = []
         for i in range(len(dataset)):
-            if dataset.csv['patientid'].iloc[i] in test_patient_ids:
-                fold_mapping[i] = 'test'
-            if dataset.csv['patientid'].iloc[i] in val_patient_ids:
-                fold_mapping[i] = 'val'
+            if dataset.csv['patientid'].iloc[i] in result_patient_ids:
+                result_dataset_indices.append(i)
+        return result_dataset_indices
 
-        train_indices = np.argwhere(fold_mapping == 'train').flatten()
-        val_indices = np.argwhere(fold_mapping == 'val').flatten()
-        test_indices = np.argwhere(fold_mapping == 'test').flatten()
+    test_indices = patient_indices_to_dataset_indices(folds_indices[0])
+    all_indices = range(len(dataset))
 
-        saved_folds.append(
-            {'train': train_indices, 'val': val_indices, 'test': test_indices})
+    saved_folds['test'] = test_indices
+    saved_folds['train'] = list(set(all_indices) - set(test_indices))
 
-    np.save(path, saved_folds)
-    logging.info(f'Saved folds to {path}.npy')
+    for i in range(1, len(folds_indices)):
+        val_indices = patient_indices_to_dataset_indices(folds_indices[i])
+        train_indices = list(set(all_indices) -
+                             set(val_indices) - set(test_indices))
+
+        saved_folds['folds'].append(
+            {'train': train_indices, 'val': val_indices})
+
+    with open(path, 'wb') as f:
+        return pickle.dump(saved_folds, f)
+
+    logging.info(f'Saved folds to {path}')
     return saved_folds
 
 
-def partitions_generator(dataset, folds):
+def partitions_generator(dataset, n_folds, test):
     patient_ids = dataset.csv['patientid'].unique()
     logging.info(f'found {len(patient_ids)} patients in the dataset')
-    folds = get_folds(dataset, folds)
-    for fold in folds:
+    folds = get_folds(dataset, n_folds)
+    if test:
+        yield (xrv_datasets.SubsetDataset(dataset, folds['train']),
+               xrv_datasets.SubsetDataset(dataset, folds['test']))
+        return
+
+    for fold in folds['folds']:
         train_dataset = xrv_datasets.SubsetDataset(dataset, fold['train'])
         val_dataset = xrv_datasets.SubsetDataset(dataset, fold['val'])
-        test_dataset = xrv_datasets.SubsetDataset(dataset, fold['test'])
         assert len(set(train_dataset.csv['patientid'].unique()) &
-                   set(test_dataset.csv['patientid'].unique())) == 0
-        yield train_dataset, val_dataset, test_dataset
+                   set(val_dataset.csv['patientid'].unique())) == 0
+        yield train_dataset, val_dataset
 
 
 def calculate_performance_metrics(predictions,
@@ -106,7 +109,7 @@ def calculate_performance_metrics(predictions,
 
 
 def calculate_average_performance(performance_reports):
-    classes = ['no Covid', 'Covid'] # list(performance_reports[0].keys())
+    classes = ['no Covid', 'Covid']  # list(performance_reports[0].keys())
     final_result = {}
     for cl in classes:
         count = 0
@@ -146,32 +149,22 @@ def main():
     metrics_history = []
     train_metrics_history = []
 
-    for fold_idx, (train_dataset, val_dataset, test_dataset) in \
-            enumerate(partitions_generator(d_covid19, 10)):
+    for fold_idx, (train_dataset, eval_dataset) in \
+            enumerate(partitions_generator(d_covid19, 10, args.test)):
         logging.info(f'fold number {fold_idx}: '
                      f'train size is {len(train_dataset)} '
-                     f'test size is {len(test_dataset)}')
+                     f'eval size is {len(eval_dataset)}')
 
         if args.data_aug:
             train_dataset.dataset.data_aug = data.get_data_aug()
             train_dataset.dataset.data_aug = data.get_data_aug()
 
-        if not args.test:
-            features_train = feature_extractor.extract(train_dataset)
-            labels_train = train_dataset.labels
+        features_train = feature_extractor.extract(train_dataset)
+        labels_train = train_dataset.labels
 
-            features_eval = feature_extractor.extract(val_dataset)
-            labels_eval = val_dataset.labels
-        else:
-            train_val = \
-                xrv_datasets.Merge_Dataset([train_dataset, val_dataset])
+        features_eval = feature_extractor.extract(eval_dataset)
+        labels_eval = eval_dataset.labels
 
-            features_train = feature_extractor.extract(train_val)
-            labels_train = train_val.labels
-
-            features_eval = feature_extractor.extract(test_dataset)
-            labels_eval = test_dataset.labels
-        
         feat_mean_train = np.mean(features_train, axis=0)
         features_train_centered = features_train - feat_mean_train
         features_test_centered = features_eval - feat_mean_train
@@ -182,9 +175,9 @@ def main():
 
         if args.run_PCA:
             pca = PCA(n_components=args.pca_out_dim)
-            pca.fit_transform(features_train)
-            pca.transform(features_eval)
-            #print("Running PCA")
+            features_train = pca.fit_transform(features_train)
+            features_eval = pca.transform(features_eval)
+            print("Running PCA")
 
         model = Model()
         model.fit(features_train, labels_train)
@@ -194,7 +187,7 @@ def main():
         metrics = calculate_performance_metrics(predictions,
                                                 predictions_hard,
                                                 labels_eval,
-                                                test_dataset.pathologies)
+                                                eval_dataset.pathologies)
         metrics_history.append(metrics)
 
         train_predictions_hard = model.predict(features_train)
@@ -202,12 +195,13 @@ def main():
         train_metrics = calculate_performance_metrics(train_predictions,
                                                       train_predictions_hard,
                                                       labels_train,
-                                                      test_dataset.pathologies)
+                                                      eval_dataset.pathologies)
         train_metrics_history.append(train_metrics)
         # logging.info(json.dumps(metrics, indent=4))
 
     average_metrics = calculate_average_performance(metrics_history)
-    average_train_metrics = calculate_average_performance(train_metrics_history)
+    average_train_metrics = \
+        calculate_average_performance(train_metrics_history)
     logging.info('Average train perf across all folds:')
     logging.info(json.dumps(average_train_metrics, indent=4))
     logging.info('Average across all folds:')
@@ -220,16 +214,5 @@ def main():
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
-    for lbp in [True]:
-        for hog in [True, False]:
-            for fft in [True, False]:
-                for run_PCA in [True, False]:
-                    for nn in [True, False]:
-                        args.lbp=lbp
-                        args.hog = hog
-                        args.fft = fft
-                        args.run_PCA = run_PCA
-                        args.nn = nn
-                        print(args)
-                        main()
-
+    print(args)
+    main()

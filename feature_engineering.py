@@ -11,7 +11,10 @@ def prepare_image(image,target_size=(224,224)):
   except:
     pass
   image=cv2.resize(image,target_size)
-  image=np.divide(image+1024,2048)*255
+  try:
+    image=np.divide(image-np.min(image),np.max(image)-np.min(image))*255
+  except:
+    pass
   return image
 
 def get_lbp(image,P=8,R=1):
